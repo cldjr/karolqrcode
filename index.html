@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Karol QRCode (0.52)</title>
+    <title>Karol QRCode (0.53)</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -14,19 +14,19 @@
         #reader-container {
             height: 25vh; width: 100%; background: #000; position: relative; overflow: hidden; 
             display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 5;
-            /* Transição suave para o efeito de glow nas bordas */
-            border: 4px solid transparent;
-            transition: all 0.3s ease;
+            border: 5px solid transparent;
+            /* Transição de 0.5s para o brilho sumir suavemente */
+            transition: all 0.5s ease-in-out;
         }
 
-        /* EFEITOS DE GLOW NO VISOR */
+        /* EFEITOS DE GLOW NO VISOR (MAIS INTENSOS) */
         #reader-container.glow-verde { 
             border-color: #4caf50; 
-            box-shadow: inset 0 0 20px rgba(76, 175, 80, 0.6); 
+            box-shadow: inset 0 0 30px rgba(76, 175, 80, 0.8), 0 0 15px rgba(76, 175, 80, 0.5); 
         }
         #reader-container.glow-amarelo { 
             border-color: #ffc107; 
-            box-shadow: inset 0 0 20px rgba(255, 193, 7, 0.6); 
+            box-shadow: inset 0 0 30px rgba(255, 193, 7, 0.8), 0 0 15px rgba(255, 193, 7, 0.5); 
         }
 
         #btn-start {
@@ -47,20 +47,17 @@
         .stat-value { color: #fff; font-weight: bold; font-size: 1.2em; }
         #scanned-text { color: #4caf50; font-size: 1.5em; word-break: break-all; font-weight: bold; }
 
+        /* QR Code limpo, sem piscar */
         #qrcode-canvas { 
             display: flex; justify-content: center; align-items: center; padding: 4px; 
-            background: white; border-radius: 8px; color: #ccc; font-size: 0.9em;
-            border: 4px solid white; transition: all 0.3s ease-out; 
+            background: white; border-radius: 8px; border: 4px solid white;
         }
-
-        .pisca-verde { border-color: #4caf50 !important; box-shadow: 0 0 25px rgba(76, 175, 80, 0.9); }
-        .pisca-amarelo { border-color: #ffc107 !important; box-shadow: 0 0 25px rgba(255, 193, 7, 0.9); }
 
         .btn-reset { background: #555; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
-    <h3>Karol QRCode (0.52)</h3>
+    <h3>Karol QRCode (0.53)</h3>
     
     <div id="reader-container">
         <button id="btn-start" onclick="ligarTudo()">INICIAR SCANNER</button>
@@ -82,8 +79,7 @@
         const scanner = new Html5Qrcode("reader");
         let ultimoTextoLido = "";
         let wakeLock = null; 
-        let timeoutPiscar; 
-        let timeoutGlow; // Timeout para limpar o glow do visor
+        let timeoutGlow; 
         let codigosUnicos = new Set(); 
         let segundosPassados = 0;
         let intervaloTimer = null;
@@ -116,33 +112,26 @@
         }
 
         function darFeedbackVisual(tipo) {
-            const qrCanvas = document.getElementById('qrcode-canvas');
             const scannerView = document.getElementById('reader-container');
             
-            // Limpa estados anteriores
-            clearTimeout(timeoutPiscar);
             clearTimeout(timeoutGlow);
-            qrCanvas.classList.remove('pisca-verde', 'pisca-amarelo');
             scannerView.classList.remove('glow-verde', 'glow-amarelo');
             
-            // Força reflow para animação rodar de novo
-            void qrCanvas.offsetWidth; 
-            void scannerView.offsetWidth;
+            void scannerView.offsetWidth; // Force Reflow
             
             if (tipo === 'novo') {
-                qrCanvas.classList.add('pisca-verde');
                 scannerView.classList.add('glow-verde');
                 if ("vibrate" in navigator) {
                     navigator.vibrate(200);
                 }
             } else if (tipo === 'repetido') {
-                qrCanvas.classList.add('pisca-amarelo');
                 scannerView.classList.add('glow-amarelo');
             }
             
-            // Remove o feedback depois de meio segundo
-            timeoutPiscar = setTimeout(() => { qrCanvas.classList.remove('pisca-verde', 'pisca-amarelo'); }, 500);
-            timeoutGlow = setTimeout(() => { scannerView.classList.remove('glow-verde', 'glow-amarelo'); }, 500);
+            // AGORA O GLOW DURA 1 SEGUNDO (1000ms)
+            timeoutGlow = setTimeout(() => { 
+                scannerView.classList.remove('glow-verde', 'glow-amarelo'); 
+            }, 1000);
         }
 
         function onScanSuccess(decodedText) {
@@ -169,7 +158,7 @@
             scannerAtivo = true;
             manterTelaAcordada();
 
-            // 2 FPS E MIRA SNIPER 100x100
+            // FPS 2 e Mira 100x100
             scanner.start(
                 { facingMode: "environment" }, 
                 { fps: 2, qrbox: { width: 100, height: 100 } }, 
