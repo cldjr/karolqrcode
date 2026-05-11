@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Karol QRCode (0.48)</title>
+    <title>Karol QRCode (0.49)</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -16,7 +16,6 @@
             display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 5;
         }
 
-        /* Botão para desbloquear a câmera e vibração */
         #btn-start {
             position: absolute; z-index: 30; background: #4caf50; color: white; border: none;
             padding: 15px 30px; border-radius: 8px; font-weight: bold; cursor: pointer;
@@ -48,10 +47,9 @@
     </style>
 </head>
 <body>
-    <h3>Karol QRCode (0.48)</h3>
+    <h3>Karol QRCode (0.49)</h3>
     
     <div id="reader-container">
-        <!-- OBRIGATÓRIO PARA VIBRAR: O usuário precisa clicar em algo -->
         <button id="btn-start" onclick="ligarTudo()">INICIAR SCANNER</button>
         <div id="reader"></div>
     </div>
@@ -75,14 +73,31 @@
         let codigosUnicos = new Set(); 
         let segundosPassados = 0;
         let intervaloTimer = null;
+        let scannerAtivo = false; // Flag pra saber se o scanner tá rodando
 
+        // Lógica de Wake Lock reforçada
         async function manterTelaAcordada() {
-            try {
-                if ('wakeLock' in navigator) {
+            if ('wakeLock' in navigator) {
+                try {
                     wakeLock = await navigator.wakeLock.request('screen');
+                    console.log("Wake Lock ativado!");
+                    
+                    // Se o lock for liberado (ex: o sistema desligou por força maior), avisa
+                    wakeLock.addEventListener('release', () => {
+                        console.log('Wake Lock foi liberado');
+                    });
+                } catch (err) {
+                    console.error(`${err.name}, ${err.message}`);
                 }
-            } catch (err) { console.error(err); }
+            }
         }
+
+        // Se você sair do Chrome e voltar, ele tenta reativar o Wake Lock
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible' && scannerAtivo) {
+                manterTelaAcordada();
+            }
+        });
 
         function atualizarTimer() {
             segundosPassados++;
@@ -102,7 +117,6 @@
             qrCanvas.classList.remove('pisca-verde', 'pisca-amarelo');
             void qrCanvas.offsetWidth; 
             
-            // Tenta vibrar toda vez que o sensor bate no código
             if ("vibrate" in navigator) {
                 navigator.vibrate(200);
             }
@@ -135,23 +149,25 @@
             }
         }
 
-        // Função que o usuário clica para "acordar" as APIs do celular
         function ligarTudo() {
             document.getElementById('btn-start').style.display = 'none';
-            
-            // Tenta vibrar uma vez no clique para o navegador liberar o uso
-            if ("vibrate" in navigator) {
-                navigator.vibrate(50);
-            }
+            scannerAtivo = true;
 
+            // Ativa o Wake Lock NO CLIQUE
             manterTelaAcordada();
+
+            const cameraConfig = {
+                facingMode: "environment",
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+            };
 
             scanner.start(
                 { facingMode: "environment" }, 
                 { fps: 1, qrbox: { width: 250, height: 250 } }, 
                 onScanSuccess
             ).catch(err => {
-                alert("Erro ao ligar câmera: " + err);
+                alert("Erro: " + err);
                 document.getElementById('btn-start').style.display = 'block';
             });
         }
