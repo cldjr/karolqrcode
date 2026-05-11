@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Karol QRCode (0.50)</title>
+    <title>Karol QRCode (0.51)</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -47,7 +47,7 @@
     </style>
 </head>
 <body>
-    <h3>Karol QRCode (0.50)</h3>
+    <h3>Karol QRCode (0.51)</h3>
     
     <div id="reader-container">
         <button id="btn-start" onclick="ligarTudo()">INICIAR SCANNER</button>
@@ -107,14 +107,16 @@
             qrCanvas.classList.remove('pisca-verde', 'pisca-amarelo');
             void qrCanvas.offsetWidth; 
             
-            if ("vibrate" in navigator) {
-                navigator.vibrate(200);
-            }
-            
+            // LÓGICA DE VIBRAÇÃO REELEVADA
             if (tipo === 'novo') {
                 qrCanvas.classList.add('pisca-verde');
+                // Só vibra se for código novo
+                if ("vibrate" in navigator) {
+                    navigator.vibrate(200);
+                }
             } else if (tipo === 'repetido') {
                 qrCanvas.classList.add('pisca-amarelo');
+                // Silêncio total na vibração para repetidos!
             }
             
             timeoutPiscar = setTimeout(() => { qrCanvas.classList.remove('pisca-verde', 'pisca-amarelo'); }, 500);
@@ -144,7 +146,7 @@
             scannerAtivo = true;
             manterTelaAcordada();
 
-            // AJUSTE: Mira 100x100 e 3 FPS
+            // 3 FPS + MIRA 100x100
             scanner.start(
                 { facingMode: "environment" }, 
                 { fps: 3, qrbox: { width: 100, height: 100 } }, 
