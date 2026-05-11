@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Karol QRCode (0.56)</title>
+    <title>Karol QRCode (0.57)</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -43,7 +43,7 @@
     </style>
 </head>
 <body>
-    <h3>Karol QRCode (0.56)</h3>
+    <h3>Karol QRCode (0.57)</h3>
     
     <div id="reader-container">
         <button id="btn-start" onclick="ligarTudo()">INICIAR SCANNER</button>
@@ -121,36 +121,33 @@
             scannerAtivo = true;
             manterTelaAcordada();
 
-            // VOLTAMOS PARA O START SEGURO (MÉTODO 0.54)
+            // START SEGURO
             scanner.start(
                 { facingMode: "environment" }, 
                 { fps: 2, qrbox: { width: 100, height: 100 } }, 
                 onScanSuccess
             )
             .then(() => {
-                // TENTA APLICAR MELHORIAS APÓS O INÍCIO (SEGURO)
-                const track = scanner.getVideoTracks()[0];
-                const capabilities = track.getCapabilities();
-                
-                let constraints = { advanced: [] };
+                // JEITO CERTO DE PEGAR A TRACK NO HTML5-QRCODE
+                const track = scanner.getRunningTrack();
+                if (track) {
+                    const capabilities = track.getCapabilities();
+                    let constraints = { advanced: [] };
 
-                // Tenta Foco Contínuo
-                if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
-                    constraints.advanced.push({ focusMode: 'continuous' });
+                    // Foco Contínuo
+                    if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+                        constraints.advanced.push({ focusMode: 'continuous' });
+                    }
+
+                    // Zoom de 2x (se o celular deixar)
+                    if (capabilities.zoom) {
+                        constraints.advanced.push({ zoom: 2 });
+                    }
+
+                    track.applyConstraints(constraints)
+                        .then(() => console.log("Hardware tunado com sucesso!"))
+                        .catch(e => console.log("O hardware recusou os mimos:", e));
                 }
-
-                // Tenta Zoom de 2x se disponível (ajuda no QR Code pequeno)
-                if (capabilities.zoom) {
-                    constraints.advanced.push({ zoom: 2 });
-                }
-
-                // Tenta Resolução Alta
-                if (capabilities.width && capabilities.width.max >= 1920) {
-                    constraints.width = { ideal: 1920 };
-                    constraints.height = { ideal: 1080 };
-                }
-
-                track.applyConstraints(constraints).catch(e => console.log("Ajustes ignorados:", e));
             })
             .catch(err => {
                 alert("Erro ao abrir câmera: " + err);
