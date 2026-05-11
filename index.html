@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Karol QRCode (0.54)</title>
+    <title>Karol QRCode (0.55)</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
+        /* Estilos mantidos da v0.54 para manter a identidade visual */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: sans-serif; text-align: center; background: #121212; color: #e0e0e0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
         h3 { font-size: 1.1em; color: #fff; padding: 10px 0; flex-shrink: 0; background: #121212;} 
@@ -15,24 +16,15 @@
             height: 25vh; width: 100%; background: #000; position: relative; overflow: hidden; 
             display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 5;
             border: 5px solid transparent;
-            /* Suavidade na entrada e saída do glow */
             transition: all 0.5s ease-in-out;
         }
 
-        /* GLOW APENAS NO VISOR */
-        #reader-container.glow-verde { 
-            border-color: #4caf50; 
-            box-shadow: inset 0 0 30px rgba(76, 175, 80, 0.8), 0 0 15px rgba(76, 175, 80, 0.5); 
-        }
-        #reader-container.glow-amarelo { 
-            border-color: #ffc107; 
-            box-shadow: inset 0 0 30px rgba(255, 193, 7, 0.8), 0 0 15px rgba(255, 193, 7, 0.5); 
-        }
+        #reader-container.glow-verde { border-color: #4caf50; box-shadow: inset 0 0 30px rgba(76, 175, 80, 0.8); }
+        #reader-container.glow-amarelo { border-color: #ffc107; box-shadow: inset 0 0 30px rgba(255, 193, 7, 0.8); }
 
         #btn-start {
             position: absolute; z-index: 30; background: #4caf50; color: white; border: none;
             padding: 15px 30px; border-radius: 8px; font-weight: bold; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
         }
 
         #reader { width: 100% !important; border: none !important; }
@@ -40,24 +32,19 @@
         #result-area { 
             flex-grow: 1; display: flex; flex-direction: column; justify-content: center; 
             align-items: center; gap: 15px; background: #1e1e1e; border-radius: 15px 15px 0 0;
-            padding: 10px; box-shadow: 0 -5px 15px rgba(0,0,0,0.5); z-index: 10;
+            padding: 10px; z-index: 10;
         }
 
-        #stats-bar { display: flex; justify-content: space-around; width: 100%; background: #2a2a2a; padding: 10px; border-radius: 8px; margin-bottom: 5px; font-size: 0.9em; color: #aaa; }
+        #stats-bar { display: flex; justify-content: space-around; width: 100%; background: #2a2a2a; padding: 10px; border-radius: 8px; font-size: 0.9em; color: #aaa; }
         .stat-value { color: #fff; font-weight: bold; font-size: 1.2em; }
         #scanned-text { color: #4caf50; font-size: 1.5em; word-break: break-all; font-weight: bold; }
 
-        /* QR Code estático, sem bordas que piscam */
-        #qrcode-canvas { 
-            display: flex; justify-content: center; align-items: center; padding: 4px; 
-            background: white; border-radius: 8px; border: 4px solid white;
-        }
-
+        #qrcode-canvas { display: flex; justify-content: center; align-items: center; padding: 4px; background: white; border-radius: 8px; border: 4px solid white; }
         .btn-reset { background: #555; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
-    <h3>Karol QRCode (0.54)</h3>
+    <h3>Karol QRCode (0.55)</h3>
     
     <div id="reader-container">
         <button id="btn-start" onclick="ligarTudo()">INICIAR SCANNER</button>
@@ -87,51 +74,23 @@
 
         async function manterTelaAcordada() {
             if ('wakeLock' in navigator) {
-                try {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                } catch (err) { console.error(err); }
+                try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
             }
-        }
-
-        document.addEventListener('visibilitychange', async () => {
-            if (wakeLock !== null && document.visibilityState === 'visible' && scannerAtivo) {
-                manterTelaAcordada();
-            }
-        });
-
-        function atualizarTimer() {
-            segundosPassados++;
-            document.getElementById('tempo-scan').innerText = segundosPassados + 's';
-        }
-
-        function resetarTimer() {
-            segundosPassados = 0;
-            document.getElementById('tempo-scan').innerText = '0s';
-            clearInterval(intervaloTimer);
-            intervaloTimer = setInterval(atualizarTimer, 1000);
         }
 
         function darFeedbackVisual(tipo) {
             const scannerView = document.getElementById('reader-container');
-            
             clearTimeout(timeoutGlow);
             scannerView.classList.remove('glow-verde', 'glow-amarelo');
-            
-            void scannerView.offsetWidth; // Reset de animação
+            void scannerView.offsetWidth; 
             
             if (tipo === 'novo') {
                 scannerView.classList.add('glow-verde');
-                if ("vibrate" in navigator) {
-                    navigator.vibrate(200);
-                }
+                if ("vibrate" in navigator) navigator.vibrate(200);
             } else if (tipo === 'repetido') {
                 scannerView.classList.add('glow-amarelo');
             }
-            
-            // O glow permanece por 1 segundo
-            timeoutGlow = setTimeout(() => { 
-                scannerView.classList.remove('glow-verde', 'glow-amarelo'); 
-            }, 1000);
+            timeoutGlow = setTimeout(() => { scannerView.classList.remove('glow-verde', 'glow-amarelo'); }, 1000);
         }
 
         function onScanSuccess(decodedText) {
@@ -142,15 +101,20 @@
                 resetarTimer();
                 document.getElementById('scanned-text').innerText = decodedText;
                 document.getElementById('qrcode-canvas').innerHTML = "";
-                new QRCode(document.getElementById("qrcode-canvas"), {
-                    text: decodedText, width: 330, height: 330,
-                    colorDark : "#000000", colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.H
-                });
+                new QRCode(document.getElementById("qrcode-canvas"), { text: decodedText, width: 330, height: 330 });
                 darFeedbackVisual('novo');
             } else if (ultimoTextoLido !== "") {
                 darFeedbackVisual('repetido');
             }
+        }
+
+        function resetarTimer() {
+            segundosPassados = 0;
+            clearInterval(intervaloTimer);
+            intervaloTimer = setInterval(() => {
+                segundosPassados++;
+                document.getElementById('tempo-scan').innerText = segundosPassados + 's';
+            }, 1000);
         }
 
         function ligarTudo() {
@@ -158,27 +122,45 @@
             scannerAtivo = true;
             manterTelaAcordada();
 
-            // 2 FPS + Mira 100x100
-            scanner.start(
-                { facingMode: "environment" }, 
-                { fps: 2, qrbox: { width: 100, height: 100 } }, 
-                onScanSuccess
-            ).catch(err => {
-                alert("Erro: " + err);
-                document.getElementById('btn-start').style.display = 'block';
+            // CONFIGURAÇÕES AVANÇADAS DE FOCO E RESOLUÇÃO
+            const config = {
+                fps: 2,
+                qrbox: { width: 100, height: 100 },
+                aspectRatio: 1.777778 // Força 16:9
+            };
+
+            const videoConstraints = {
+                facingMode: "environment",
+                width: { min: 640, ideal: 1920, max: 2560 }, // Tenta Full HD
+                height: { min: 480, ideal: 1080, max: 1440 },
+                // FOCO CONTÍNUO (Experimental para Android/Chrome)
+                focusMode: "continuous"
+            };
+
+            scanner.start(videoConstraints, config, onScanSuccess)
+            .then(() => {
+                // Tenta aplicar Zoom digital após iniciar (se o browser suportar)
+                const track = scanner.getVideoTracks()[0];
+                const capabilities = track.getCapabilities();
+                if (capabilities.zoom) {
+                    track.applyConstraints({
+                        advanced: [{ zoom: capabilities.zoom.max / 2 || 2 }] 
+                    });
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                // Fallback: se o Full HD falhar, tenta o modo básico
+                scanner.start({ facingMode: "environment" }, config, onScanSuccess);
             });
         }
 
         function limparTela() {
             ultimoTextoLido = "";
             codigosUnicos.clear();
-            clearInterval(intervaloTimer);
-            segundosPassados = 0;
             document.getElementById('contador-unicos').innerText = "0";
-            document.getElementById('tempo-scan').innerText = "--s";
             document.getElementById('scanned-text').innerText = "Aguardando...";
             document.getElementById('qrcode-canvas').innerHTML = "Nenhum código gerado";
-            document.getElementById('reader-container').classList.remove('glow-verde', 'glow-amarelo');
         }
     </script>
 </body>
