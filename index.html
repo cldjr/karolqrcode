@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Karol QRCode (0.57)</title>
+    <title>Karol QRCode (0.58)</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -43,7 +43,7 @@
     </style>
 </head>
 <body>
-    <h3>Karol QRCode (0.57)</h3>
+    <h3>Karol QRCode (0.58)</h3>
     
     <div id="reader-container">
         <button id="btn-start" onclick="ligarTudo()">INICIAR SCANNER</button>
@@ -82,7 +82,6 @@
             clearTimeout(timeoutGlow);
             scannerView.classList.remove('glow-verde', 'glow-amarelo');
             void scannerView.offsetWidth; 
-            
             if (tipo === 'novo') {
                 scannerView.classList.add('glow-verde');
                 if ("vibrate" in navigator) navigator.vibrate(200);
@@ -121,33 +120,37 @@
             scannerAtivo = true;
             manterTelaAcordada();
 
-            // START SEGURO
             scanner.start(
                 { facingMode: "environment" }, 
                 { fps: 2, qrbox: { width: 100, height: 100 } }, 
                 onScanSuccess
             )
             .then(() => {
-                // JEITO CERTO DE PEGAR A TRACK NO HTML5-QRCODE
-                const track = scanner.getRunningTrack();
-                if (track) {
-                    const capabilities = track.getCapabilities();
-                    let constraints = { advanced: [] };
+                // Tática "Pé na Porta": Esperamos 500ms pro vídeo carregar e pegamos a track pelo DOM
+                setTimeout(() => {
+                    const video = document.querySelector('#reader video');
+                    if (video && video.srcObject) {
+                        const track = video.srcObject.getVideoTracks()[0];
+                        if (track) {
+                            const caps = track.getCapabilities();
+                            let constraints = { advanced: [] };
 
-                    // Foco Contínuo
-                    if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
-                        constraints.advanced.push({ focusMode: 'continuous' });
+                            // Se o hardware suportar foco contínuo, aplica
+                            if (caps.focusMode && caps.focusMode.includes('continuous')) {
+                                constraints.advanced.push({ focusMode: 'continuous' });
+                            }
+
+                            // Se suportar zoom, dá um "tapinha" de 2x pra ajudar o código pequeno
+                            if (caps.zoom) {
+                                constraints.advanced.push({ zoom: 2 });
+                            }
+
+                            track.applyConstraints(constraints)
+                                .then(() => console.log("Hardware tunado via DOM!"))
+                                .catch(e => console.log("Ajuste recusado:", e));
+                        }
                     }
-
-                    // Zoom de 2x (se o celular deixar)
-                    if (capabilities.zoom) {
-                        constraints.advanced.push({ zoom: 2 });
-                    }
-
-                    track.applyConstraints(constraints)
-                        .then(() => console.log("Hardware tunado com sucesso!"))
-                        .catch(e => console.log("O hardware recusou os mimos:", e));
-                }
+                }, 500);
             })
             .catch(err => {
                 alert("Erro ao abrir câmera: " + err);
