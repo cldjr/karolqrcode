@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Karol QRCode (0.51)</title>
+    <title>Karol QRCode (0.52)</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -14,6 +14,19 @@
         #reader-container {
             height: 25vh; width: 100%; background: #000; position: relative; overflow: hidden; 
             display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 5;
+            /* Transição suave para o efeito de glow nas bordas */
+            border: 4px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        /* EFEITOS DE GLOW NO VISOR */
+        #reader-container.glow-verde { 
+            border-color: #4caf50; 
+            box-shadow: inset 0 0 20px rgba(76, 175, 80, 0.6); 
+        }
+        #reader-container.glow-amarelo { 
+            border-color: #ffc107; 
+            box-shadow: inset 0 0 20px rgba(255, 193, 7, 0.6); 
         }
 
         #btn-start {
@@ -47,7 +60,7 @@
     </style>
 </head>
 <body>
-    <h3>Karol QRCode (0.51)</h3>
+    <h3>Karol QRCode (0.52)</h3>
     
     <div id="reader-container">
         <button id="btn-start" onclick="ligarTudo()">INICIAR SCANNER</button>
@@ -70,6 +83,7 @@
         let ultimoTextoLido = "";
         let wakeLock = null; 
         let timeoutPiscar; 
+        let timeoutGlow; // Timeout para limpar o glow do visor
         let codigosUnicos = new Set(); 
         let segundosPassados = 0;
         let intervaloTimer = null;
@@ -103,23 +117,32 @@
 
         function darFeedbackVisual(tipo) {
             const qrCanvas = document.getElementById('qrcode-canvas');
-            clearTimeout(timeoutPiscar);
-            qrCanvas.classList.remove('pisca-verde', 'pisca-amarelo');
-            void qrCanvas.offsetWidth; 
+            const scannerView = document.getElementById('reader-container');
             
-            // LÓGICA DE VIBRAÇÃO REELEVADA
+            // Limpa estados anteriores
+            clearTimeout(timeoutPiscar);
+            clearTimeout(timeoutGlow);
+            qrCanvas.classList.remove('pisca-verde', 'pisca-amarelo');
+            scannerView.classList.remove('glow-verde', 'glow-amarelo');
+            
+            // Força reflow para animação rodar de novo
+            void qrCanvas.offsetWidth; 
+            void scannerView.offsetWidth;
+            
             if (tipo === 'novo') {
                 qrCanvas.classList.add('pisca-verde');
-                // Só vibra se for código novo
+                scannerView.classList.add('glow-verde');
                 if ("vibrate" in navigator) {
                     navigator.vibrate(200);
                 }
             } else if (tipo === 'repetido') {
                 qrCanvas.classList.add('pisca-amarelo');
-                // Silêncio total na vibração para repetidos!
+                scannerView.classList.add('glow-amarelo');
             }
             
+            // Remove o feedback depois de meio segundo
             timeoutPiscar = setTimeout(() => { qrCanvas.classList.remove('pisca-verde', 'pisca-amarelo'); }, 500);
+            timeoutGlow = setTimeout(() => { scannerView.classList.remove('glow-verde', 'glow-amarelo'); }, 500);
         }
 
         function onScanSuccess(decodedText) {
@@ -146,10 +169,10 @@
             scannerAtivo = true;
             manterTelaAcordada();
 
-            // 3 FPS + MIRA 100x100
+            // 2 FPS E MIRA SNIPER 100x100
             scanner.start(
                 { facingMode: "environment" }, 
-                { fps: 3, qrbox: { width: 100, height: 100 } }, 
+                { fps: 2, qrbox: { width: 100, height: 100 } }, 
                 onScanSuccess
             ).catch(err => {
                 alert("Erro: " + err);
@@ -166,6 +189,7 @@
             document.getElementById('tempo-scan').innerText = "--s";
             document.getElementById('scanned-text').innerText = "Aguardando...";
             document.getElementById('qrcode-canvas').innerHTML = "Nenhum código gerado";
+            document.getElementById('reader-container').classList.remove('glow-verde', 'glow-amarelo');
         }
     </script>
 </body>
