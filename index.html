@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Karol QRCode (0.60)</title>
+    <!-- NOME ATUALIZADO NO TITLE -->
+    <title>App da Karol (0.61)</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
+        /* Estilos mantidos para consistência visual */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: sans-serif; text-align: center; background: #121212; color: #e0e0e0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
         h3 { font-size: 1.1em; color: #fff; padding: 10px 0; flex-shrink: 0; background: #121212;} 
@@ -54,7 +56,8 @@
     </style>
 </head>
 <body>
-    <h3>App da Karol (0.60)</h3>
+    <!-- NOME ATUALIZADO NO CABEÇALHO -->
+    <h3>App da Karol (0.61)</h3>
     
     <div id="reader-container">
         <button id="btn-start" onclick="ligarTudo()">INICIAR SCANNER</button>
@@ -91,27 +94,19 @@
         let videoTrack = null;
         let zoomAtual = 1.0;
 
-        // Função Wake Lock mais "agressiva"
+        // Lógica de Wake Lock (v0.60 mantida)
         async function ativarWakeLock() {
             if ('wakeLock' in navigator) {
                 try {
                     wakeLock = await navigator.wakeLock.request('screen');
-                    console.log("Wake Lock ativado com sucesso!");
-                    
-                    // Se o lock cair por algum motivo, ele tenta reativar
+                    console.log("Wake Lock OK");
                     wakeLock.addEventListener('release', () => {
-                        if (scannerAtivo) {
-                            console.log("Reativando Wake Lock liberado...");
-                            ativarWakeLock();
-                        }
+                        if (scannerAtivo) ativarWakeLock();
                     });
-                } catch (err) {
-                    console.error("Erro Wake Lock:", err);
-                }
+                } catch (err) { console.error(err); }
             }
         }
 
-        // Listener para reativar quando voltar da tela bloqueada ou aba minimizada
         document.addEventListener('visibilitychange', async () => {
             if (document.visibilityState === 'visible' && scannerAtivo) {
                 ativarWakeLock();
@@ -160,18 +155,17 @@
             document.getElementById('btn-start').style.display = 'none';
             scannerAtivo = true;
             
-            // Ativa no clique (Regra do Navegador)
             ativarWakeLock();
 
+            // --- A MUDANÇA TÁ AQUI BB ---
             scanner.start(
                 { facingMode: "environment" }, 
-                { fps: 2, qrbox: { width: 100, height: 100 } }, 
+                { fps: 2, qrbox: { width: 150, height: 150 } }, // MUDOU DE 100 PRA 150
                 onScanSuccess
             )
             .then(() => {
-                // Segunda tentativa de Wake Lock após a câmera estabilizar
                 setTimeout(() => {
-                    ativarWakeLock();
+                    ativarWakeLock(); // Reforço do v0.60
                     
                     const video = document.querySelector('#reader video');
                     if (video && video.srcObject) {
