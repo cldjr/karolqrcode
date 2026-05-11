@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Karol QRCode (0.46)</title>
+    <title>Karol QRCode (0.47)</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -41,8 +41,7 @@
     </style>
 </head>
 <body>
-    <!-- NOME ATUALIZADO AQUI -->
-    <h3>Karol QRCode (0.46)</h3>
+    <h3>Karol QRCode (0.47)</h3>
     
     <div id="reader-container">
         <div id="reader"></div>
@@ -102,11 +101,13 @@
             qrCanvas.classList.remove('pisca-verde', 'pisca-amarelo');
             void qrCanvas.offsetWidth; 
             
+            // HAPTIC FEEDBACK: Agora vibra em QUALQUER leitura (Novo ou Repetido)
+            if ("vibrate" in navigator) {
+                navigator.vibrate(200);
+            }
+            
             if (tipo === 'novo') {
                 qrCanvas.classList.add('pisca-verde');
-                if ("vibrate" in navigator) {
-                    navigator.vibrate(200);
-                }
             } else if (tipo === 'repetido') {
                 qrCanvas.classList.add('pisca-amarelo');
             }
