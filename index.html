@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanner Free Hand 0.46 (Haptic Feedback)</title>
+    <title>Karol QRCode (0.46)</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -41,7 +41,8 @@
     </style>
 </head>
 <body>
-    <h3>QR Scanner - V 0.46</h3>
+    <!-- NOME ATUALIZADO AQUI -->
+    <h3>Karol QRCode (0.46)</h3>
     
     <div id="reader-container">
         <div id="reader"></div>
@@ -103,7 +104,6 @@
             
             if (tipo === 'novo') {
                 qrCanvas.classList.add('pisca-verde');
-                // FEEDBACK TÁTIL: Vibra por 200ms (apenas para códigos novos)
                 if ("vibrate" in navigator) {
                     navigator.vibrate(200);
                 }
