@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Karol QRCode (0.59)</title>
+    <title>Karol QRCode (0.60)</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -21,7 +21,6 @@
         #reader-container.glow-verde { border-color: #4caf50; box-shadow: inset 0 0 30px rgba(76, 175, 80, 0.8); }
         #reader-container.glow-amarelo { border-color: #ffc107; box-shadow: inset 0 0 30px rgba(255, 193, 7, 0.8); }
 
-        /* CONTROLES DE ZOOM */
         #zoom-controls {
             position: absolute; bottom: 10px; right: 10px; z-index: 40;
             display: none; flex-direction: row; gap: 10px; align-items: center;
@@ -55,12 +54,11 @@
     </style>
 </head>
 <body>
-    <h3>Karol QRCode (0.59)</h3>
+    <h3>Karol QRCode (0.60)</h3>
     
     <div id="reader-container">
         <button id="btn-start" onclick="ligarTudo()">INICIAR SCANNER</button>
         
-        <!-- ELEMENTOS DE ZOOM -->
         <div id="zoom-controls">
             <button class="zoom-btn" onclick="alterarZoom(-1)">-</button>
             <span id="zoom-label">1.0x</span>
@@ -90,16 +88,35 @@
         let segundosPassados = 0;
         let intervaloTimer = null;
         let scannerAtivo = false;
-        
-        // Variáveis de Hardware
         let videoTrack = null;
         let zoomAtual = 1.0;
 
-        async function manterTelaAcordada() {
+        // Função Wake Lock mais "agressiva"
+        async function ativarWakeLock() {
             if ('wakeLock' in navigator) {
-                try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log("Wake Lock ativado com sucesso!");
+                    
+                    // Se o lock cair por algum motivo, ele tenta reativar
+                    wakeLock.addEventListener('release', () => {
+                        if (scannerAtivo) {
+                            console.log("Reativando Wake Lock liberado...");
+                            ativarWakeLock();
+                        }
+                    });
+                } catch (err) {
+                    console.error("Erro Wake Lock:", err);
+                }
             }
         }
+
+        // Listener para reativar quando voltar da tela bloqueada ou aba minimizada
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState === 'visible' && scannerAtivo) {
+                ativarWakeLock();
+            }
+        });
 
         function darFeedbackVisual(tipo) {
             const scannerView = document.getElementById('reader-container');
@@ -142,7 +159,9 @@
         function ligarTudo() {
             document.getElementById('btn-start').style.display = 'none';
             scannerAtivo = true;
-            manterTelaAcordada();
+            
+            // Ativa no clique (Regra do Navegador)
+            ativarWakeLock();
 
             scanner.start(
                 { facingMode: "environment" }, 
@@ -150,24 +169,25 @@
                 onScanSuccess
             )
             .then(() => {
-                // Tática via DOM para pegar a Track
+                // Segunda tentativa de Wake Lock após a câmera estabilizar
                 setTimeout(() => {
+                    ativarWakeLock();
+                    
                     const video = document.querySelector('#reader video');
                     if (video && video.srcObject) {
                         videoTrack = video.srcObject.getVideoTracks()[0];
                         if (videoTrack) {
                             const caps = videoTrack.getCapabilities();
-                            // Se o hardware suportar zoom, mostra os botões
                             if (caps.zoom) {
                                 document.getElementById('zoom-controls').style.display = 'flex';
-                                // Tenta Foco Contínuo
-                                if (caps.focusMode && caps.focusMode.includes('continuous')) {
-                                    videoTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
-                                }
+                            }
+                            // Tenta Foco Contínuo
+                            if (caps.focusMode && caps.focusMode.includes('continuous')) {
+                                videoTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
                             }
                         }
                     }
-                }, 800);
+                }, 1000);
             })
             .catch(err => {
                 alert("Erro: " + err);
@@ -180,20 +200,14 @@
             const caps = videoTrack.getCapabilities();
             if (!caps.zoom) return;
 
-            // Incrementa/Decrementa de 0.5 em 0.5 para ser mais suave
             let novoZoom = zoomAtual + (delta * 0.5);
-            
-            // Trava nos limites do hardware
             if (novoZoom < caps.zoom.min) novoZoom = caps.zoom.min;
             if (novoZoom > caps.zoom.max) novoZoom = caps.zoom.max;
 
             zoomAtual = novoZoom;
-            
-            videoTrack.applyConstraints({
-                advanced: [{ zoom: zoomAtual }]
-            }).then(() => {
-                document.getElementById('zoom-label').innerText = zoomAtual.toFixed(1) + 'x';
-            }).catch(e => console.log("Erro zoom:", e));
+            videoTrack.applyConstraints({ advanced: [{ zoom: zoomAtual }] })
+                .then(() => { document.getElementById('zoom-label').innerText = zoomAtual.toFixed(1) + 'x'; })
+                .catch(e => console.log(e));
         }
 
         function limparTela() {
