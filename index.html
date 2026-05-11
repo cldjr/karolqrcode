@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Karol QRCode (0.49)</title>
+    <title>Karol QRCode (0.50)</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -47,7 +47,7 @@
     </style>
 </head>
 <body>
-    <h3>Karol QRCode (0.49)</h3>
+    <h3>Karol QRCode (0.50)</h3>
     
     <div id="reader-container">
         <button id="btn-start" onclick="ligarTudo()">INICIAR SCANNER</button>
@@ -73,26 +73,16 @@
         let codigosUnicos = new Set(); 
         let segundosPassados = 0;
         let intervaloTimer = null;
-        let scannerAtivo = false; // Flag pra saber se o scanner tá rodando
+        let scannerAtivo = false;
 
-        // Lógica de Wake Lock reforçada
         async function manterTelaAcordada() {
             if ('wakeLock' in navigator) {
                 try {
                     wakeLock = await navigator.wakeLock.request('screen');
-                    console.log("Wake Lock ativado!");
-                    
-                    // Se o lock for liberado (ex: o sistema desligou por força maior), avisa
-                    wakeLock.addEventListener('release', () => {
-                        console.log('Wake Lock foi liberado');
-                    });
-                } catch (err) {
-                    console.error(`${err.name}, ${err.message}`);
-                }
+                } catch (err) { console.error(err); }
             }
         }
 
-        // Se você sair do Chrome e voltar, ele tenta reativar o Wake Lock
         document.addEventListener('visibilitychange', async () => {
             if (wakeLock !== null && document.visibilityState === 'visible' && scannerAtivo) {
                 manterTelaAcordada();
@@ -152,19 +142,12 @@
         function ligarTudo() {
             document.getElementById('btn-start').style.display = 'none';
             scannerAtivo = true;
-
-            // Ativa o Wake Lock NO CLIQUE
             manterTelaAcordada();
 
-            const cameraConfig = {
-                facingMode: "environment",
-                width: { ideal: 1920 },
-                height: { ideal: 1080 }
-            };
-
+            // AJUSTE: Mira 100x100 e 3 FPS
             scanner.start(
                 { facingMode: "environment" }, 
-                { fps: 1, qrbox: { width: 250, height: 250 } }, 
+                { fps: 3, qrbox: { width: 100, height: 100 } }, 
                 onScanSuccess
             ).catch(err => {
                 alert("Erro: " + err);
