@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanner Free Hand 0.45 (Estável)</title>
+    <title>Scanner Free Hand 0.46 (Haptic Feedback)</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -41,7 +41,7 @@
     </style>
 </head>
 <body>
-    <h3>QR Scanner - V 0.45</h3>
+    <h3>QR Scanner - V 0.46</h3>
     
     <div id="reader-container">
         <div id="reader"></div>
@@ -100,8 +100,17 @@
             clearTimeout(timeoutPiscar);
             qrCanvas.classList.remove('pisca-verde', 'pisca-amarelo');
             void qrCanvas.offsetWidth; 
-            if (tipo === 'novo') qrCanvas.classList.add('pisca-verde');
-            else if (tipo === 'repetido') qrCanvas.classList.add('pisca-amarelo');
+            
+            if (tipo === 'novo') {
+                qrCanvas.classList.add('pisca-verde');
+                // FEEDBACK TÁTIL: Vibra por 200ms (apenas para códigos novos)
+                if ("vibrate" in navigator) {
+                    navigator.vibrate(200);
+                }
+            } else if (tipo === 'repetido') {
+                qrCanvas.classList.add('pisca-amarelo');
+            }
+            
             timeoutPiscar = setTimeout(() => { qrCanvas.classList.remove('pisca-verde', 'pisca-amarelo'); }, 500);
         }
 
@@ -135,7 +144,6 @@
             document.getElementById('qrcode-canvas').innerHTML = "Nenhum código gerado";
         }
 
-        // VOLTAMOS PARA O SETUP SIMPLES QUE FUNCIONOU NA 0.42
         scanner.start(
             { facingMode: "environment" }, 
             { fps: 1, qrbox: { width: 250, height: 250 } }, 
