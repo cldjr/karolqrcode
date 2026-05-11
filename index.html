@@ -3,147 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanner Free Hand 0.43 (Foco & Alta Resolução)</title>
+    <title>Scanner Free Hand 0.44 (Ignição Manual)</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body { 
-            font-family: sans-serif; 
-            text-align: center; 
-            background: #121212; 
-            color: #e0e0e0; 
-            height: 100dvh; 
-            display: flex; 
-            flex-direction: column; 
-            overflow: hidden; 
-        }
-        
-        h3 { 
-            font-size: 1.1em; 
-            color: #fff; 
-            padding: 10px 0; 
-            flex-shrink: 0; 
-            background: #121212;
-        } 
+        body { font-family: sans-serif; text-align: center; background: #121212; color: #e0e0e0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+        h3 { font-size: 1.1em; color: #fff; padding: 10px 0; flex-shrink: 0; background: #121212;} 
         
         #reader-container {
-            height: 25vh; 
-            width: 100%;
-            background: #000;
-            position: relative;
-            overflow: hidden; 
-            display: flex;
-            align-items: center;
-            flex-shrink: 0; 
-            z-index: 5;
+            height: 25vh; width: 100%; background: #000; position: relative; overflow: hidden; 
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 5;
+        }
+
+        /* Botão de Start que fica por cima da câmera antes de ligar */
+        #start-button {
+            position: absolute; z-index: 20; background: #4caf50; color: white; border: none;
+            padding: 15px 30px; border-radius: 8px; font-weight: bold; cursor: pointer;
         }
 
         #reader { width: 100% !important; border: none !important; }
 
         #result-area { 
-            flex-grow: 1; 
-            display: flex;
-            flex-direction: column;
-            justify-content: center; 
-            align-items: center;
-            gap: 15px; 
-            background: #1e1e1e; 
-            border-radius: 15px 15px 0 0;
-            padding: 10px; 
-            box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
-            z-index: 10;
+            flex-grow: 1; display: flex; flex-direction: column; justify-content: center; 
+            align-items: center; gap: 15px; background: #1e1e1e; border-radius: 15px 15px 0 0;
+            padding: 10px; box-shadow: 0 -5px 15px rgba(0,0,0,0.5); z-index: 10;
         }
 
-        #stats-bar {
-            display: flex;
-            justify-content: space-around;
-            width: 100%;
-            background: #2a2a2a;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 5px;
-            font-size: 0.9em;
-            color: #aaa;
-        }
-
-        .stat-value {
-            color: #fff;
-            font-weight: bold;
-            font-size: 1.2em;
-        }
-
-        #text-container {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        #scanned-text {
-            color: #4caf50; 
-            font-size: 1.5em; 
-            word-break: break-all; 
-            font-weight: bold;
-        }
+        #stats-bar { display: flex; justify-content: space-around; width: 100%; background: #2a2a2a; padding: 10px; border-radius: 8px; margin-bottom: 5px; font-size: 0.9em; color: #aaa; }
+        .stat-value { color: #fff; font-weight: bold; font-size: 1.2em; }
+        #scanned-text { color: #4caf50; font-size: 1.5em; word-break: break-all; font-weight: bold; }
 
         #qrcode-canvas { 
-            display: flex; 
-            justify-content: center; 
-            align-items: center;
-            padding: 4px; 
-            background: white; 
-            border-radius: 8px; 
-            color: #ccc;
-            font-size: 0.9em;
-            border: 4px solid white; 
-            transition: all 0.3s ease-out; 
+            display: flex; justify-content: center; align-items: center; padding: 4px; 
+            background: white; border-radius: 8px; color: #ccc; font-size: 0.9em;
+            border: 4px solid white; transition: all 0.3s ease-out; 
         }
 
-        .pisca-verde {
-            border-color: #4caf50 !important;
-            box-shadow: 0 0 25px rgba(76, 175, 80, 0.9);
-        }
+        .pisca-verde { border-color: #4caf50 !important; box-shadow: 0 0 25px rgba(76, 175, 80, 0.9); }
+        .pisca-amarelo { border-color: #ffc107 !important; box-shadow: 0 0 25px rgba(255, 193, 7, 0.9); }
 
-        .pisca-amarelo {
-            border-color: #ffc107 !important;
-            box-shadow: 0 0 25px rgba(255, 193, 7, 0.9);
-        }
-
-        button { 
-            background: #4caf50; 
-            color: white; 
-            border: none; 
-            padding: 15px 40px; 
-            border-radius: 8px; 
-            font-size: 1.1em;
-            font-weight: bold; 
-            cursor: pointer; 
-            flex-shrink: 0;
-        }
+        .btn-reset { background: #555; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
-    <h3>QR Scanner - V 0.43</h3>
+    <h3>QR Scanner - V 0.44</h3>
     
     <div id="reader-container">
+        <!-- BOTÃO DE IGNICAO OBRIGATÓRIO -->
+        <button id="start-button" onclick="iniciarScanner()">Ligar Câmera / Dar Permissão</button>
         <div id="reader"></div>
     </div>
 
     <div id="result-area">
-        
         <div id="stats-bar">
             <div>Qtd Únicos: <span id="contador-unicos" class="stat-value">0</span></div>
-            <div>Último lido há: <span id="tempo-scan" class="stat-value">--s</span></div>
+            <div>Último há: <span id="tempo-scan" class="stat-value">--s</span></div>
         </div>
 
-        <div id="text-container">
-            <p id="scanned-text">Aguardando...</p>
-        </div>
-        
+        <p id="scanned-text">Aguardando...</p>
         <div id="qrcode-canvas">Nenhum código gerado</div>
-        
-        <button onclick="limparTela()">Limpar / Resetar</button>
+        <button class="btn-reset" onclick="limparTela()">Limpar / Resetar</button>
     </div>
 
     <script>
@@ -151,7 +71,6 @@
         let ultimoTextoLido = "";
         let wakeLock = null; 
         let timeoutPiscar; 
-
         let codigosUnicos = new Set(); 
         let segundosPassados = 0;
         let intervaloTimer = null;
@@ -161,18 +80,8 @@
                 if ('wakeLock' in navigator) {
                     wakeLock = await navigator.wakeLock.request('screen');
                 }
-            } catch (err) {
-                console.error(`Erro no Wake Lock: ${err.message}`);
-            }
+            } catch (err) { console.error(err); }
         }
-
-        document.addEventListener('visibilitychange', async () => {
-            if (wakeLock !== null && document.visibilityState === 'visible') {
-                manterTelaAcordada();
-            }
-        });
-
-        manterTelaAcordada();
 
         function atualizarTimer() {
             segundosPassados++;
@@ -188,49 +97,49 @@
 
         function darFeedbackVisual(tipo) {
             const qrCanvas = document.getElementById('qrcode-canvas');
-            
             clearTimeout(timeoutPiscar);
             qrCanvas.classList.remove('pisca-verde', 'pisca-amarelo');
             void qrCanvas.offsetWidth; 
-            
-            if (tipo === 'novo') {
-                qrCanvas.classList.add('pisca-verde');
-            } else if (tipo === 'repetido') {
-                qrCanvas.classList.add('pisca-amarelo');
-            }
-
-            timeoutPiscar = setTimeout(() => {
-                qrCanvas.classList.remove('pisca-verde', 'pisca-amarelo');
-            }, 500);
+            if (tipo === 'novo') qrCanvas.classList.add('pisca-verde');
+            else if (tipo === 'repetido') qrCanvas.classList.add('pisca-amarelo');
+            timeoutPiscar = setTimeout(() => { qrCanvas.classList.remove('pisca-verde', 'pisca-amarelo'); }, 500);
         }
 
         function onScanSuccess(decodedText) {
             if (decodedText !== ultimoTextoLido) {
                 ultimoTextoLido = decodedText; 
-                
                 codigosUnicos.add(decodedText);
                 document.getElementById('contador-unicos').innerText = codigosUnicos.size;
                 resetarTimer();
-                
                 document.getElementById('scanned-text').innerText = decodedText;
-                
                 document.getElementById('qrcode-canvas').innerHTML = "";
                 new QRCode(document.getElementById("qrcode-canvas"), {
-                    text: decodedText,
-                    width: 330, 
-                    height: 330,
-                    colorDark : "#000000",
-                    colorLight : "#ffffff",
+                    text: decodedText, width: 330, height: 330,
+                    colorDark : "#000000", colorLight : "#ffffff",
                     correctLevel : QRCode.CorrectLevel.H
                 });
-
                 darFeedbackVisual('novo');
-
-            } else {
-                if (ultimoTextoLido !== "") {
-                    darFeedbackVisual('repetido');
-                }
+            } else if (ultimoTextoLido !== "") {
+                darFeedbackVisual('repetido');
             }
+        }
+
+        // FUNÇÃO QUE DISPARA COM O CLIQUE DO USUÁRIO
+        function iniciarScanner() {
+            document.getElementById('start-button').style.display = 'none';
+            manterTelaAcordada();
+
+            const cameraConfig = {
+                facingMode: "environment",
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+            };
+
+            scanner.start(cameraConfig, { fps: 1, qrbox: { width: 250, height: 250 } }, onScanSuccess)
+            .catch(err => {
+                alert("Erro ao ligar câmera. Verifique se deu permissão.");
+                document.getElementById('start-button').style.display = 'block';
+            });
         }
 
         function limparTela() {
@@ -238,29 +147,11 @@
             codigosUnicos.clear();
             clearInterval(intervaloTimer);
             segundosPassados = 0;
-
             document.getElementById('contador-unicos').innerText = "0";
             document.getElementById('tempo-scan').innerText = "--s";
             document.getElementById('scanned-text').innerText = "Aguardando...";
             document.getElementById('qrcode-canvas').innerHTML = "Nenhum código gerado";
-            document.getElementById('qrcode-canvas').classList.remove('pisca-verde', 'pisca-amarelo');
         }
-
-        // TÁTIICA DE GUERRILHA: Exige resolução alta e tenta forçar o foco contínuo no navegador
-        const cameraConfig = {
-            facingMode: "environment",
-            width: { ideal: 1920, min: 1280 }, // Exige Full HD no mínimo
-            height: { ideal: 1080, min: 720 },
-            advanced: [{ focusMode: "continuous" }] // O navegador pode ignorar, mas a gente tenta
-        };
-
-        const scannerConfig = {
-            fps: 1, 
-            qrbox: { width: 250, height: 250 } // Área quadrada é melhor para códigos pequenos
-        };
-
-        scanner.start(cameraConfig, scannerConfig, onScanSuccess)
-               .catch(err => console.error("Erro ao iniciar câmera com alta resolução", err));
     </script>
 </body>
 </html>
