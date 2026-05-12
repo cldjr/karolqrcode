@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>App da Karol (0.62-TEST)</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: sans-serif; text-align: center; background: #121212; color: #e0e0e0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+        h3 { font-size: 1.1em; color: #fff; padding: 10px 0; flex-shrink: 0; background: #121212;} 
+        
+        #reader-container {
+            height: 25vh; width: 100%; background: #000; position: relative; overflow: hidden; 
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 5;
+            border: 5px solid transparent;
+            transition: all 0.5s ease-in-out;
+        }
+
+        /* Efeito de filtro de contraste agressivo */
+        #reader video.high-contrast {
+            filter: grayscale(100%) contrast(200%) brightness(120%) !important;
+        }
+
+        #reader-container.glow-verde { border-color: #4caf50; box-shadow: inset 0 0 30px rgba(76, 175, 80, 0.8); }
+        #reader-container.glow-amarelo { border-color: #ffc107; box-shadow: inset 0 0 30px rgba(255, 193, 7, 0.8); }
+
+        /* PAINEL DE CONTROLES AVANÇADOS */
+        #advanced-controls {
+            position: absolute; top: 10px; right: 10px; z-index: 40;
+            display: none; flex-direction: column; gap: 8px;
+        }
+        
+        #zoom-controls {
+            position: absolute; bottom: 10px; right: 10px; z-index: 40;
+            display: none; flex-direction: row; gap: 10px; align-items: center;
+            background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 20px;
+        }
+
+        .control-btn {
+            background: #444; color: white; border: none; width: 45px; height: 45px;
+            border-radius: 10px; font-size: 1.2em; cursor: pointer; display: flex;
+            align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+        .control-btn.active { background: #4caf50; color: #000; }
+
+        #btn-start {
+            position: absolute; z-index: 30; background: #4caf50; color: white; border: none;
+            padding: 15px 30px; border-radius: 8px; font-weight: bold; cursor: pointer;
+        }
+
+        #reader { width: 100% !important; border: none !important; }
+
+        #result-area { 
+            flex-grow: 1; display: flex; flex-direction: column; justify-content: center; 
+            align-items: center; gap: 12px; background: #1e1e1e; border-radius: 15px 15px 0 0;
+            padding: 10px; z-index: 10;
+        }
+
+        #stats-bar { display: flex; justify-content: space-around; width: 100%; background: #2a2a2a; padding: 10px; border-radius: 8px; font-size: 0.9em; color: #aaa; }
+        .stat-value { color: #fff; font-weight: bold; font-size: 1.2em; }
+        #scanned-text { color: #4caf50; font-size: 1.4em; word-break: break-all; font-weight: bold; min-height: 1.5em; }
+
+        #qrcode-canvas { display: flex; justify-content: center; align-items: center; padding: 4px; background: white; border-radius: 8px; border: 4px solid white; }
+        .btn-reset { background: #555; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h3>App da Karol (0.62-TEST)</h3>
+    
+    <div id="reader-container">
+        <button id="btn-start" onclick="ligarTudo()">INICIAR SCANNER</button>
+        
+        <!-- BOTÕES DE TESTE INTERNO -->
+        <div id="advanced-controls">
+            <button id="btn-torch" class="control-btn" onclick="toggleLanterna()">🔦</button>
+            <button id="btn-filter" class="control-btn" onclick="toggleFiltro()">👁️</button>
+        </div>
+
+        <div id="zoom-controls">
+            <button class="control-btn" style="width:35px;height:35px" onclick="alterarZoom(-1)">-</button>
+            <span id="zoom-label" style="font-size:0.8em; font-weight:bold">1.0x</span>
+            <button class="control-btn" style="width:35px;height:35px" onclick="alterarZoom(1)">+</button>
+        </div>
+
+        <div id="reader"></div>
+    </div>
+
+    <div id="result-area">
+        <div id="stats-bar">
+            <div>Qtd Únicos: <span id="contador-unicos" class="stat-value">0</span></div>
+            <div>Último há: <span id="tempo-scan" class="stat-value">--s</span></div>
+        </div>
+
+        <p id="scanned-text">Aguardando...</p>
+        <div id="qrcode-canvas">Nenhum código gerado</div>
+        <button class="btn-reset" onclick="limparTela()">Limpar / Resetar</button>
+    </div>
+
+    <script>
+        const scanner = new Html5Qrcode("reader");
+        let ultimoTextoLido = "";
+        let wakeLock = null; 
+        let codigosUnicos = new Set(); 
+        let segundosPassados = 0;
+        let intervaloTimer = null;
+        let scannerAtivo = false;
+        
+        // Variaveis de Hardware e Teste
+        let videoTrack = null;
+        let zoomAtual = 1.0;
+        let lanternaLigada = false;
+        let filtroAtivo = false;
+
+        async function ativarWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    wakeLock.addEventListener('release', () => { if (scannerAtivo) ativarWakeLock(); });
+                } catch (err) {}
+            }
+        }
+
+        function darFeedbackVisual(tipo) {
+            const scannerView = document.getElementById('reader-container');
+            scannerView.classList.remove('glow-verde', 'glow-amarelo');
+            void scannerView.offsetWidth; 
+            if (tipo === 'novo') {
+                scannerView.classList.add('glow-verde');
+                if ("vibrate" in navigator) navigator.vibrate(200);
+            } else if (tipo === 'repetido') {
+                scannerView.classList.add('glow-amarelo');
+            }
+        }
+
+        function onScanSuccess(decodedText) {
+            if (decodedText !== ultimoTextoLido) {
+                ultimoTextoLido = decodedText; 
+                codigosUnicos.add(decodedText);
+                document.getElementById('contador-unicos').innerText = codigosUnicos.size;
+                resetarTimer();
+                document.getElementById('scanned-text').innerText = decodedText;
+                document.getElementById('qrcode-canvas').innerHTML = "";
+                new QRCode(document.getElementById("qrcode-canvas"), { text: decodedText, width: 330, height: 330 });
+                darFeedbackVisual('novo');
+            } else if (ultimoTextoLido !== "") {
+                darFeedbackVisual('repetido');
+            }
+        }
+
+        function resetarTimer() {
+            segundosPassados = 0;
+            clearInterval(intervaloTimer);
+            intervaloTimer = setInterval(() => {
+                segundosPassados++;
+                document.getElementById('tempo-scan').innerText = segundosPassados + 's';
+            }, 1000);
+        }
+
+        function toggleLanterna() {
+            if (!videoTrack) return;
+            const caps = videoTrack.getCapabilities();
+            if (!caps.torch) {
+                alert("Lanterna não suportada neste hardware/navegador.");
+                return;
+            }
+            lanternaLigada = !lanternaLigada;
+            videoTrack.applyConstraints({ advanced: [{ torch: lanternaLigada }] })
+                .then(() => {
+                    document.getElementById('btn-torch').classList.toggle('active', lanternaLigada);
+                }).catch(e => console.log(e));
+        }
+
+        function toggleFiltro() {
+            const videoElement = document.querySelector('#reader video');
+            if (!videoElement) return;
+            filtroAtivo = !filtroAtivo;
+            videoElement.classList.toggle('high-contrast', filtroAtivo);
+            document.getElementById('btn-filter').classList.toggle('active', filtroAtivo);
+        }
+
+        function ligarTudo() {
+            document.getElementById('btn-start').style.display = 'none';
+            scannerAtivo = true;
+            ativarWakeLock();
+
+            scanner.start(
+                { facingMode: "environment" }, 
+                { fps: 2, qrbox: { width: 150, height: 150 } }, 
+                onScanSuccess
+            )
+            .then(() => {
+                setTimeout(() => {
+                    const video = document.querySelector('#reader video');
+                    if (video && video.srcObject) {
+                        videoTrack = video.srcObject.getVideoTracks()[0];
+                        if (videoTrack) {
+                            const caps = videoTrack.getCapabilities();
+                            // Mostra painéis se hardware permitir
+                            document.getElementById('advanced-controls').style.display = 'flex';
+                            if (caps.zoom) document.getElementById('zoom-controls').style.display = 'flex';
+                            
+                            // Foco Contínuo sempre on
+                            if (caps.focusMode && caps.focusMode.includes('continuous')) {
+                                videoTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+                            }
+                        }
+                    }
+                }, 1000);
+            });
+        }
+
+        function alterarZoom(delta) {
+            if (!videoTrack) return;
+            const caps = videoTrack.getCapabilities();
+            let novoZoom = zoomAtual + (delta * 0.5);
+            if (novoZoom < caps.zoom.min) novoZoom = caps.zoom.min;
+            if (novoZoom > caps.zoom.max) novoZoom = caps.zoom.max;
+            zoomAtual = novoZoom;
+            videoTrack.applyConstraints({ advanced: [{ zoom: zoomAtual }] })
+                .then(() => { document.getElementById('zoom-label').innerText = zoomAtual.toFixed(1) + 'x'; });
+        }
+
+        function limparTela() {
+            ultimoTextoLido = "";
+            codigosUnicos.clear();
+            document.getElementById('contador-unicos').innerText = "0";
+            document.getElementById('scanned-text').innerText = "Aguardando...";
+            document.getElementById('qrcode-canvas').innerHTML = "Nenhum código gerado";
+        }
+    </script>
+</body>
+</html>
