@@ -18,7 +18,7 @@
             transition: all 0.5s ease-in-out;
         }
 
-        /* Efeito de filtro de contraste agressivo */
+        /* Filtro de contraste para o vídeo */
         #reader video.high-contrast {
             filter: grayscale(100%) contrast(200%) brightness(120%) !important;
         }
@@ -26,7 +26,6 @@
         #reader-container.glow-verde { border-color: #4caf50; box-shadow: inset 0 0 30px rgba(76, 175, 80, 0.8); }
         #reader-container.glow-amarelo { border-color: #ffc107; box-shadow: inset 0 0 30px rgba(255, 193, 7, 0.8); }
 
-        /* PAINEL DE CONTROLES AVANÇADOS */
         #advanced-controls {
             position: absolute; top: 10px; right: 10px; z-index: 40;
             display: none; flex-direction: column; gap: 8px;
@@ -72,7 +71,6 @@
     <div id="reader-container">
         <button id="btn-start" onclick="ligarTudo()">INICIAR SCANNER</button>
         
-        <!-- BOTÕES DE TESTE INTERNO -->
         <div id="advanced-controls">
             <button id="btn-torch" class="control-btn" onclick="toggleLanterna()">🔦</button>
             <button id="btn-filter" class="control-btn" onclick="toggleFiltro()">👁️</button>
@@ -102,12 +100,12 @@
         const scanner = new Html5Qrcode("reader");
         let ultimoTextoLido = "";
         let wakeLock = null; 
+        let timeoutGlow; // VARIÁVEL DE VOLTA AO JOGO
         let codigosUnicos = new Set(); 
         let segundosPassados = 0;
         let intervaloTimer = null;
         let scannerAtivo = false;
         
-        // Variaveis de Hardware e Teste
         let videoTrack = null;
         let zoomAtual = 1.0;
         let lanternaLigada = false;
@@ -124,14 +122,24 @@
 
         function darFeedbackVisual(tipo) {
             const scannerView = document.getElementById('reader-container');
+            
+            // LIMPA O TIMEOUT ANTERIOR E AS CLASSES
+            clearTimeout(timeoutGlow);
             scannerView.classList.remove('glow-verde', 'glow-amarelo');
-            void scannerView.offsetWidth; 
+            
+            void scannerView.offsetWidth; // RESET DA ANIMAÇÃO
+            
             if (tipo === 'novo') {
                 scannerView.classList.add('glow-verde');
                 if ("vibrate" in navigator) navigator.vibrate(200);
             } else if (tipo === 'repetido') {
                 scannerView.classList.add('glow-amarelo');
             }
+
+            // O CRONÔMETRO QUE TINHA SUMIDO!
+            timeoutGlow = setTimeout(() => { 
+                scannerView.classList.remove('glow-verde', 'glow-amarelo'); 
+            }, 1000);
         }
 
         function onScanSuccess(decodedText) {
@@ -162,14 +170,14 @@
             if (!videoTrack) return;
             const caps = videoTrack.getCapabilities();
             if (!caps.torch) {
-                alert("Lanterna não suportada neste hardware/navegador.");
+                alert("Lanterna não suportada!");
                 return;
             }
             lanternaLigada = !lanternaLigada;
             videoTrack.applyConstraints({ advanced: [{ torch: lanternaLigada }] })
                 .then(() => {
                     document.getElementById('btn-torch').classList.toggle('active', lanternaLigada);
-                }).catch(e => console.log(e));
+                });
         }
 
         function toggleFiltro() {
@@ -197,11 +205,8 @@
                         videoTrack = video.srcObject.getVideoTracks()[0];
                         if (videoTrack) {
                             const caps = videoTrack.getCapabilities();
-                            // Mostra painéis se hardware permitir
                             document.getElementById('advanced-controls').style.display = 'flex';
                             if (caps.zoom) document.getElementById('zoom-controls').style.display = 'flex';
-                            
-                            // Foco Contínuo sempre on
                             if (caps.focusMode && caps.focusMode.includes('continuous')) {
                                 videoTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
                             }
@@ -228,6 +233,8 @@
             document.getElementById('contador-unicos').innerText = "0";
             document.getElementById('scanned-text').innerText = "Aguardando...";
             document.getElementById('qrcode-canvas').innerHTML = "Nenhum código gerado";
+            const scannerView = document.getElementById('reader-container');
+            scannerView.classList.remove('glow-verde', 'glow-amarelo');
         }
     </script>
 </body>
